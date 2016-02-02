@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Use open-source resource to build a DST</title>
+    <meta name="description" content="How to use open source resources to build a domain specific automation-test">
+    <meta name="author" content="Eric King">
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+    <link rel="stylesheet" href="css/theme/league.css" id="theme">
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+      
+    </script><!--[if lt IE 9]>
+    <script src="lib/js/html5shiv.js"></script><![endif]-->
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <h2>piece together an automation solution</h2>
+          <p><small>Author <a href="http://dracher.github.io">Wang Yaning </a> / 
+              <a href="mailto:yaniwang@redhat.com">@VirtQE</a>
+              
+              </small></p>
+        </section>
+        <section>
+          <section>
+            <h3>Agenda</h3>
+            <p>This slide is mainly about how to make a automation solution in the following situation</p>
+            <ul>
+              <li class="fragment">Can not find a existing solution / Framework to use</li>
+              <li class="fragment">No enough time / resources to build things from scratch </li>
+            </ul>
+          </section>
+          <section>
+            <ul>
+              <li>Introduction of RHEV-H</li>
+              <li>RHEV-H automation Difficulties</li>
+              <li>List of used Resources and Technology</li>
+              <ul>
+                <li>Languages
+                  <ul>
+                    <li>Python</li>
+                    <li>Javascript</li>
+                    <li>Golang</li>
+                  </ul>
+                </li>
+                <li>Framework, Tools
+                  <ul>
+                    <li>Bottle, Cobbler</li>
+                    <li>uinput</li>
+                    <li>Aria2</li>
+                    <li>Mongodb, Meteor</li>
+                    <li>Ansible</li>
+                  </ul>
+                </li>
+              </ul>
+            </ul>
+          </section>
+        </section>
+        <section>   
+          <section>
+            <h2>A Little Background</h2>
+            <ul>
+              <li class="fragment">About RHEV-H</li>
+              <li class="fragment">Why need a customized automation solution</li>
+            </ul>
+          </section>
+          <section>
+            <h3>RHEV-H</h3>
+            <ul>
+              <li class="fragment">Dedicated Hypervisor</li>
+              <li class="fragment">Built from RHEL components
+                <ul>
+                  <li class="fragment">Supports same hardware as RHEL</li>
+                </ul>
+              </li>
+              <li style="color: red" class="fragment">A TUI interface for installation and configuration</li>
+              <li class="fragment">Provided in ISO format</li>
+              <li style="color: red" class="fragment">Minimal state information persisted to a Config partition
+                <ul>
+                  <li class="fragment">Read-Only FS</li>
+                </ul>
+              </li>
+              <li class="fragment">Deployment Modes
+                <ul>
+                  <li class="fragment">CD-ROM</li>
+                  <li class="fragment">Flash Memory</li>
+                  <li style="color: blue" class="fragment">Network (PXE) Boot</li>
+                </ul>
+              </li>
+            </ul>
+          </section>
+          <section>
+            <h3>not good for automation test</h3><img width="600" data-src="img/001.png">
+            <ol>
+              <li>Customized TUI</li>
+              <ul>
+                <li>Can not use beaker to Provision</li>
+                <li>Hard to manipulate (no useful API)</li>
+              </ul>
+              <li>Read-Only FS</li>
+              <ul>
+                <li>automation test can not be "stateless"</li>
+              </ul>
+            </ol>
+          </section>
+        </section>
+        <section>
+          <section>
+            <h3>first thing first</h3>
+            <ul>
+              <li>A Provision System <a href="http://cobbler.github.io/">Cobbler</a></li>
+              <li>Use <a href="http://thiemonge.org/getting-started-with-uinput">uinput </a>
+                <to>simulate keyboard action</to>
+              </li>
+              <ul>
+                <li>the user level input subsystem, create and to handle input devices from an application</li>
+              </ul>
+            </ul>
+          </section>
+          <section>
+            <h3>structure 01</h3><img width="300" data-src="img/fig01.png">
+          </section>
+          <section>
+            <h2>How to run the test script</h2>
+            <h3 class="fragment">Some Troubles</h3>
+            <ul>
+              <li class="fragment">script need run right after the network service enabled</li>
+              <li class="fragment">need find way to persist state on a read-only system</li>
+            </ul>
+            <h3 class="fragment">Solution</h3>
+            <ul>
+              <li class="fragment">inject test script as system service use `livecd-tools`</li>
+              <li class="fragment">should be a server - client structure</li>
+            </ul>
+          </section>
+          <section>
+            <h3>structure 02</h3><img width="500" data-src="img/fig02.png">
+          </section>
+        </section>
+        <section>
+          <section>
+            <h3>How to trigger the test run</h3>
+            <ul>
+              <li class="fragment">All RHEVH builds can be downloaded from brewweb</li>
+              <li class="fragment">Simple HTTP link address</li>
+            </ul>
+          </section>
+          <section>
+            <h3>Need a web-crawler to monitor brewweb</h3>
+            <p class="fragment"> <a href="http://scrapy.org/">Scrapy</a></p>
+            <p class="fragment">An open source and collaborative framework for extracting the data you need from websites</p>
+            <p class="fragment">A real instance <a href="http://10.66.10.22:6810">Scrapyd </a>a scrapy server</p>
+          </section>
+          <section> 
+            <h3>Need download the builds to local</h3>
+            <p class="fragment"><a href="https://aria2.github.io/">Aria2</a></p>
+            <p class="fragment">aria2 is a lightweight multi-protocol, multi-source command-line download utility. Can be manipulated via built-in JSON-RPC and XML-RPC interfaces, and support state hook so can be used to trigger next step action</p>
+            <p class="fragment">A aria2 <a href="http://10.66.10.22:8091">instance</a></p>
+          </section>
+          <section>
+            <h3>Structure 03</h3><img width="500" data-src="img/fig03.png">
+          </section>
+          <section>
+            <h3>Befor Aria2</h3>
+            <p>some other attempts</p>
+            <ul>
+              <li>wget, curl</li>
+              <li>httplib of python</li>
+            </ul>
+          </section>
+        </section>
+        <section>
+          <section>
+            <h3>Now need a helper controller</h3>
+            <ul>
+              <li class="fragment">Glue the components together</li>
+              <li class="fragment">Receive and store test-results</li>
+              <li class="fragment">To organize test-cases</li>
+            </ul>
+          </section>
+          <section>
+            <h3>A web framework</h3>
+            <p class="fragment"> <a href="http://bottlepy.org/docs/dev/index.html">Bottle</a></p>
+            <p class="fragment">Bottle is a fast, simple and lightweight WSGI micro web-framework for Python</p>
+            <p class="fragment">plus extra functions and API, author named it <a href="">Igor</a></p>
+          </section>
+          <section>
+            <h3>Structure 04</h3><img height="580" data-src="img/igor.png">
+          </section>
+        </section>
+        <section>
+          <section>
+            <h3>Data Management</h3>
+            <ul>
+              <li class="fragment">Fetched urls from Scrapy</li>
+              <li class="fragment">Test results from Igor</li>
+              <li class="fragment">Aria2 need to know the new build's url</li>
+              <li class="fragment">Igor need to know which test machine is available</li>
+            </ul>
+          </section>
+          <section>
+            <h3>Need a database</h3>
+            <p class="fragment"><a href="https://www.mongodb.org/">Mongodb</a></p>
+            <p class="fragment">MongoDB (from humongous) is a cross-platform document-oriented database. Classified as a NoSQL database</p>
+            <p class="fragment">A MongoDB <a href="http://10.66.10.22:8082">instance</a></p>
+          </section>
+          <section>
+            <h3>Structure 05</h3><img width="600" data-src="img/fig05.png">
+          </section>
+          <section>
+            <h3>Before MongoDB</h3>
+            <p>some other attempts</p>
+            <ul>
+              <li>csv</li>
+              <li>sqlite</li>
+            </ul>
+          </section>
+        </section>
+        <section>
+          <section>
+            <h3>Machine Management</h3>
+            <ul>
+              <li class="fragment">Many rhevh test-cases require specific hardware configuration</li>
+              <ul>
+                <li class="fragment">network, e.g.: VLAN, Bond</li>
+                <li class="fragment">storage, e.g.: iscsi, fc</li>
+                <li class="fragment">other, e.g.: register with RHEVM</li>
+              </ul>
+              <li class="fragment">The configuration of test-machine often changed</li>
+              <li class="fragment">need to track all these information above</li>
+            </ul>
+          </section>
+          <section>
+            <h3>Use <a href="">Ansbile </a>
+              <to>manage configuration</to>
+            </h3>
+            <ul> 
+              <li class="fragment">Can easily get detailed configuration from multi-machines</li>
+              <li class="fragment">Don't need to install anything, will not effect test environment</li>
+              <li class="fragment">All data from ansbile are json, can easily export to Mongodb</li>
+            </ul>
+          </section>
+          <section>
+            <h3>Structure 06</h3><img width="600" data-src="img/fig06.png">
+          </section>
+          <section>
+            <h3>configuration Management</h3>
+            <p class="fragment">Need 10+ latest RHEVM test instance</p>
+            <ul>
+              <li class="fragment">Setup a rhevm for Ansible is a `Configuration`</li>
+              <li class="fragment">Can use Ansible simultaneously setup 10+ rhevm</li>
+            </ul>
+          </section>
+          <section>
+            <h3>Structure 07</h3><img data-src="img/fig07.png">
+          </section>
+        </section>
+        <section>
+          <section>
+            <h3>Last Step - Add a UI</h3>
+            <ul>
+              <li class="fragment">Need find a way to visualize all data in database</li>
+              <li class="fragment">A simple dashboard will be convenient to show raw data from Ansbile</li>
+            </ul>
+          </section>
+          <section>
+            <h3>Meteor + MongoDB</h3>
+            <ul>
+              <li class="fragment">Meteor, or MeteorJS, is an open-source JavaScript web application framework, written using Node.js. Meteor allows for rapid prototyping and produces cross-platform (web, Android, iOS) code. It integrates with MongoDB and uses the DDP and a publish–subscribe pattern to automatically propagate data changes to clients without requiring the developer to write any synchronization code</li>
+              <li class="fragment">From personal opinion, it's very good to make a small web app, especially give a simple UI for automation project. </li>
+            </ul>
+            <p class="fragment">A simple machine configuration management site that built use Meteor, MongoDB and Ansible.  <a href="http://10.66.10.22/machines">Link</a></p>
+          </section>
+          <section>
+            <h3>DDP Protocol</h3>
+            <ul>
+              <li class="fragment">Distributed Data Protocol</li>
+              <li class="fragment">A modified version of SockJS</li>
+              <li class="fragment">just a idea, use ddp instead of http, maybe can make automation also responsive, real-time</li>
+              <li class="fragment">especially useful in semi-automation test.</li>
+            </ul>
+          </section>
+        </section>
+        <section>
+          <h2>Q & A</h2>
+          <h3>Thank You</h3>
+        </section>
+      </div>
+    </div>
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+    <script>
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+        transition: 'slide', // none/fade/slide/convex/concave/zoom
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: 'plugin/zoom-js/zoom.js', async: true },
+          { src: 'plugin/notes/notes.js', async: true }
+        ]
+      });
+      
+    </script>
+  </body>
+</html>
